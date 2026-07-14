@@ -1,0 +1,64 @@
+Dexplore — NOTICE
+
+This product includes software, robot URDFs, and meshes derived from third-party
+sources. Their original copyright notices and license terms are reproduced below
+and in the per-directory LICENSE files where applicable.
+
+================================================================================
+Robot hand URDFs and meshes
+================================================================================
+
+The robot hands shipped under dexplore/data/assets/<robot>_hand/ are derived
+from the dex-urdf project (https://github.com/dexsuite/dex-urdf) with the
+following Dexplore-specific modifications by Sirui Xu:
+
+  - A 6-DOF floating-base wrist (3 prismatic + 3 revolute joints) prepended to
+    each hand, exposed as the first 6 actuated DOFs of every Dexplore_<Robot>
+    task.
+  - Decimated collision meshes added under each hand's meshes/ directory for
+    Isaac Gym physics performance.
+  - The inspire_hand_new/ asset is a SolidWorks-based rebuild of the Inspire
+    hand to match hardware in the authors' lab; it is not a verbatim copy of
+    the dex-urdf inspire_hand.
+
+The original dex-urdf upstream is licensed under the MIT License. Each hand
+directory retains its upstream LICENSE file where one was provided by dex-urdf.
+Per-hand upstream copyright holders:
+
+  inspire_hand_new/   Source CAD from Inspire Robotics
+                      (https://www.inspire-robots.com/). Licensed under
+                      CC BY-NC-SA 4.0 with permission from Inspire Robotics.
+                      See dexplore/data/assets/inspire_hand_new/LICENSE.txt.
+  leap_hand/          Copyright 2023 Ananye Agarwal. MIT License.
+  allegro_hand/       Copyright (c) 2016, SimLab. BSD 3-Clause License.
+  shadow_hand/        Apache License 2.0. Modifications (wrist injection,
+                      collision meshes) are documented above per Apache 2.0
+                      Section 4(b).
+
+================================================================================
+SMPL-X assets
+================================================================================
+
+SMPL-X-derived assets (per-subject skeleton XMLs) are not redistributed in
+this repository. The SMPL-X model (https://smpl-x.is.tue.mpg.de/) is
+distributed under a research-only license that prohibits redistribution;
+users generate these assets themselves during data preparation as documented
+in the README.
+
+The data_processing/smplx_vert_segmentation.json file is fetched at runtime
+from the Meshcapade wiki repository (https://github.com/Meshcapade/wiki) and
+is not redistributed in this repo.
+
+================================================================================
+Code
+================================================================================
+
+Portions of dexplore/ are adapted from:
+
+  - InterMimic (https://github.com/Sirui-Xu/InterMimic), Apache License 2.0.
+  - NVIDIA Isaac Gym examples and IsaacGymEnvs. Files derived from these
+    sources retain their original NVIDIA copyright headers.
+  - rl_games (https://github.com/Denys88/rl_games), MIT License.
+
+This NOTICE file is informational; it does not modify any of the licenses
+referenced above.

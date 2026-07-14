@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Data (too large for git, download via instructions in README) — anchored to
+# repo root so that dexplore/data/ (configs + asset URDFs) is NOT excluded.
+/data/
+!/data/.gitkeep
+
+# Object meshes from GRAB (downloaded separately, not redistributable)
+dexplore/data/assets/mjcf/objects/
+
+# Checkpoints (training-run subdirs; top-level pretrained .pth via Git LFS)
+checkpoint/*/
+
+# Evaluation results
+eval_results*.json
+
+# Training outputs
+output/
+
+# Rendered images
+dexplore/data/images/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Swap files
+*.swp
+*.swo
+*~
+
+# Secrets
+.env

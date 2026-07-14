@@ -1,0 +1,39 @@
+Inspire Hand URDF — License and Attribution
+============================================
+
+Source
+------
+The CAD model and URDF for this dexterous hand are derived from materials
+provided by Inspire Robotics (https://www.inspire-robots.com/).
+
+Modifications
+-------------
+This is a derivative work with the following modifications:
+  - SolidWorks-based rebuild of the URDF and meshes
+  - 6-DOF floating-base wrist chain prepended for simulation control
+  - Decimated collision meshes for Isaac Gym physics performance
+  - Fingertip frames added (massless, no collision or visual geometry)
+    to expose fingertip 3D positions to the policy observation
+
+License
+-------
+Licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+International License (CC BY-NC-SA 4.0), with permission from Inspire Robotics.
+View the full license at:
+
+  https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+Under this license:
+  - Attribution (BY): credit Inspire Robotics and indicate changes.
+  - NonCommercial (NC): no commercial use.
+  - ShareAlike (SA): derivatives must use the same license.
+
+Per CC BY-NC-SA 4.0 §3(a)(1)(A)(ii), the modifications above are flagged as
+derivative work.
+
+Relationship to project license
+-------------------------------
+This directory is the exception to the project-level NVIDIA OneWay
+Noncommercial License (see LICENSE at the repository root). This directory
+is governed by CC BY-NC-SA 4.0; the rest of the repository remains under
+the project license.
