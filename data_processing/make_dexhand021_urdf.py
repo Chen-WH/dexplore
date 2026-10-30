@@ -3,7 +3,8 @@
 Prepends the same 6-DOF floating-wrist chain used by the Inspire sim URDF
 (3 prismatic xyz + 3 revolute xyz, link0..link6) and attaches the hand base
 through `base_joint`. Mimic tags are dropped because Isaac Gym ignores them;
-couplings are applied in the task's `_action_to_pd_targets` instead.
+couplings are applied in the task's `_action_to_pd_targets` instead. Pad
+collision boxes are dropped so fingertip contacts land on the distal links.
 
 Also writes `dexhand021_<side>_retarget.urdf` (hand only, mimic kept) for
 dex-retargeting, so retargeting and simulation share the same kinematics and
@@ -61,6 +62,13 @@ def main():
     for mesh in root.iter("mesh"):
         mesh.set("filename", mesh.get("filename").replace("../meshes/", "meshes/"))
     retarget_root = copy.deepcopy(root)
+
+    # The 1 mm pad boxes would take fingertip contacts away from the distal links
+    # used as contact bodies; the pad links stay as frames for keypoints/tactile.
+    for link in root.findall("link"):
+        if link.get("name").endswith("_pad"):
+            for col in link.findall("collision"):
+                link.remove(col)
 
     n_mimic = 0
     for joint in root.findall("joint"):

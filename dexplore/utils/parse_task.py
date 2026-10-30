@@ -2,6 +2,7 @@ from env.tasks.dexplore_inspire import Dexplore_Inspire
 from env.tasks.dexplore_leap import Dexplore_Leap
 from env.tasks.dexplore_allegro import Dexplore_Allegro
 from env.tasks.dexplore_shadow import Dexplore_Shadow
+from env.tasks.dexplore_dexhand021 import Dexplore_Dexhand021
 from env.tasks.dexplore_distill import Dexplore_Distill
 from env.tasks.vec_task_wrappers import VecTaskPythonWrapper, VecTaskDAggerWrapper
 
@@ -14,6 +15,7 @@ TASK_REGISTRY = {
     'Dexplore_Leap': Dexplore_Leap,
     'Dexplore_Allegro': Dexplore_Allegro,
     'Dexplore_Shadow': Dexplore_Shadow,
+    'Dexplore_Dexhand021': Dexplore_Dexhand021,
     'Dexplore_Distill': Dexplore_Distill,
 }
 

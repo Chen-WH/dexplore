@@ -154,10 +154,15 @@ Inspire 手（动作/观测维度与 Inspire 运动学绑定，MODEL_CARD 明确
       (2) 抓桌面物体时小臂或腕部压得很低。桌面降低 20–30 cm 或移远 15 cm 明显改善。待全量数据完成后做桌子摆放扫描。
 
 ### 阶段 3：仿真任务
-- [ ] `dexplore/env/tasks/dexplore_dexhand021.py` + `dexplore/data/cfg/dexhand021.yaml`
-      （`numDof`、`numObs`、`keyBodies`、`contactBodies` = 五个 pad），在 `utils/parse_task.py` 注册。
-- [ ] 运动学回放参考轨迹（不跑物理），检查手和物体是否对齐。
-- [ ] 本机 3072 env 短训，确认奖励上升（基准：Inspire 26 个 epoch 内从 2.3 升到 10.9）。
+- [x] `dexplore/env/tasks/dexplore_dexhand021.py`（`Dexplore_Dexhand021`，已在 `utils/parse_task.py` 注册）：
+      联动按上表在 `_action_to_pd_targets` / `_set_env_state` 中实现；碰撞过滤与 Inspire 相同
+      （远节 `_4` 和 pad 为 3，其余为 2）；PD 增益和速度暂时与 Inspire 相同，待系统辨识后再调。
+- [x] `dexplore/data/cfg/dexhand021.yaml` + `train/rlg/dexhand021.yaml`：`numDof: 25`、`objectMirror: True`；
+      `numObs` 与自由度数无关，所有机器人都是 1442。keyBodies 按人手顺序：手腕，食指、中指、小指、无名指的
+      `_2/_3/_4`，拇指 `_2/_3/_4`；contactBodies 为五个远节 `_4`。
+      仿真 URDF 去掉了 pad 的 1 mm 碰撞片，让指尖接触落在远节上。
+- [x] 冒烟测试：256 env、107 条动作，46 个 epoch 内平均奖励从 4.3 涨到 13.8，训练流程正常。
+- [ ] 运动学回放参考轨迹（`playdataset`），目视检查手和镜像物体是否对齐。
 - [ ] 加域随机化：摩擦、物体质量和尺度、PD 增益、动作延迟（1–3 步）、手腕跟踪滞后和噪声、观测噪声。
 
 ### 阶段 4：训练（AutoDL）

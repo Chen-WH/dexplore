@@ -207,7 +207,9 @@ def main():
     with open(args.output, "w") as fp:
         json.dump(dict(summary=summary, sequences=report), fp, indent=1)
     print(f"{n_ok}/{n} sequences fully reachable, mean reachable frame fraction "
-          f"{summary['mean_ok_frac']:.2f} -> {args.output}")
+          f"{summary['mean_ok_frac']:.2f} -> {args.output}", flush=True)
+    # pinocchio and torch both loaded crash in their destructors at interpreter exit
+    os._exit(0)
 
 
 if __name__ == "__main__":
