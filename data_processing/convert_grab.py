@@ -289,6 +289,13 @@ def process_sequence(name, args, robot_cfg, retargeting, robot, retarget2sapien,
 
     B = sbj_parms["transl"].shape[0]
 
+    # Contact labels are computed in the y-up frame of the processed sequence,
+    # which is where obj_angles/obj_trans live
+    with torch.no_grad():
+        smplx_output_yup = smpl_model(**sbj_parms)
+    contact_joints = smplx_output_yup.joints.cpu()
+    vertices = smplx_output_yup.vertices.cpu()
+
     # Apply 90-degree X rotation to global orient
     rotation_x_90 = sRot.from_euler("x", np.pi / 2, degrees=False)
     rotated_orient = rotation_x_90 * sRot.from_rotvec(
@@ -299,7 +306,6 @@ def process_sequence(name, args, robot_cfg, retargeting, robot, retarget2sapien,
     smplx_output = smpl_model(**sbj_parms)
     joints = smplx_output.joints
     pelvis = joints[:, 0].detach().clone().double()
-    vertices = smplx_output.vertices.cpu().detach().clone()
 
     # Load object mesh
     obj_mesh = trimesh.load(
@@ -318,14 +324,17 @@ def process_sequence(name, args, robot_cfg, retargeting, robot, retarget2sapien,
     # Compute contact labels
     is_contact = torch.tensor(seq_data["contact"]["object"]).sum(dim=-1)[::4] > 0
     thres_non_contact = 0.01
-    left_foot = joints[:, 10]
-    right_foot = joints[:, 11]
+    left_foot = contact_joints[:, 10]
+    right_foot = contact_joints[:, 11]
     contact_part_label = []
+    body_contact = torch.tensor(seq_data["contact"]["body"])
+    vertices_dev = vertices.to(device)
+    obj_verts_dev = obj_verts_all.to(device)
 
     for t in range(B):
-        dis = (vertices[t].unsqueeze(0) - obj_verts_all[t].unsqueeze(1)).norm(dim=-1)
-        min_dis_v = dis.min(dim=0)[0]
-        verts_contact = torch.tensor(seq_data["contact"]["body"])[4 * t].unsqueeze(0) > 0
+        dis = (vertices_dev[t].unsqueeze(0) - obj_verts_dev[t].unsqueeze(1)).norm(dim=-1)
+        min_dis_v = dis.min(dim=0)[0].cpu()
+        verts_contact = body_contact[4 * t].unsqueeze(0) > 0
         verts_non_contact = (min_dis_v > thres_non_contact).unsqueeze(0)
         verts_not_on_ground = vertices[t, :, 1] - ground_height > 0.1
 
@@ -474,6 +483,17 @@ def process_sequence(name, args, robot_cfg, retargeting, robot, retarget2sapien,
         contact_part_label[:, 17:33], contact_part_label[:, 36:52],
     ], dim=1)
     data[:, 206:206 + 32] = contact_part_label_hand.double()
+
+    output_path = os.path.join(args.output_dir, name, f"interaction_hand_{robot_cfg.robot_name}.pt")
+    if args.contact_only:
+        # Refresh contact columns of an existing output, skipping retargeting
+        old = torch.load(output_path)
+        assert old.shape == data.shape, f"{name}: {old.shape} vs {data.shape}"
+        with torch.no_grad():
+            old[:, 205:206 + 32] = data[:, 205:206 + 32]
+        torch.save(old, output_path)
+        print(f"  Updated contact labels in {output_path}")
+        return True
     data[:, 238:241] = table_new_trans
     data[:, 241:245] = torch.from_numpy(table_angles_quat).double()
     data[:, 245:245 + 32 * 4] = torch.from_numpy(np.concatenate([
@@ -513,9 +533,7 @@ def process_sequence(name, args, robot_cfg, retargeting, robot, retarget2sapien,
     data[:, 245 + 32 * 4:245 + 32 * 4 + num_dof] = qposes
 
     # Save output
-    output_dir = os.path.join(args.output_dir, name)
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, f"interaction_hand_{robot_cfg.robot_name}.pt")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     torch.save(data, output_path)
     print(f"  Saved {output_path} ({B} frames)")
     return True
@@ -542,6 +560,10 @@ def main():
                         help="Path to robot hand URDFs directory (default: dexplore/data/assets)")
     parser.add_argument("--filter", type=str, default=None,
                         help="Only process sequences matching this substring")
+    parser.add_argument("--skip_existing", action="store_true",
+                        help="Skip sequences whose output file already exists")
+    parser.add_argument("--contact_only", action="store_true",
+                        help="Only recompute contact labels of existing outputs (no retargeting)")
     args = parser.parse_args()
 
     robot_cfg = ROBOT_CONFIGS[args.robot]
@@ -560,6 +582,10 @@ def main():
     sequences = sorted(os.listdir(seq_dir))
     if args.filter:
         sequences = [s for s in sequences if args.filter in s]
+    if args.skip_existing:
+        out_name = f"interaction_hand_{robot_cfg.robot_name}.pt"
+        sequences = [s for s in sequences
+                     if not os.path.exists(os.path.join(args.output_dir, s, out_name))]
 
     print(f"Found {len(sequences)} sequences to process")
     success, fail = 0, 0
