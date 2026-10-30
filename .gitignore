@@ -10,9 +10,19 @@ build/
 # repo root so that dexplore/data/ (configs + asset URDFs) is NOT excluded.
 /data/
 !/data/.gitkeep
+# ...or a symlink to it
+/data
 
 # Object meshes from GRAB (downloaded separately, not redistributable)
 dexplore/data/assets/mjcf/objects/
+dexplore/data/assets/mjcf/objects
+
+# Generated from robot-assets by data_processing/make_dexhand021_urdf.py
+dexplore/data/assets/dexhand021/
+
+# SMPL-X-derived files (subject to the SMPL-X license, generated locally)
+dexplore/data/assets/smplx/
+data_processing/smplx_vert_segmentation.json
 
 # Checkpoints (training-run subdirs; top-level pretrained .pth via Git LFS)
 checkpoint/*/
