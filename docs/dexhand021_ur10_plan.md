@@ -184,7 +184,12 @@ Inspire 手（动作/观测维度与 Inspire 运动学绑定，MODEL_CARD 明确
 - 3072 env、接触对上限 8M、缓冲倍数 10：约 2.06 万步/秒（含 PPO 更新，与 Inspire 的 2.17 万相当），
   但第 9 个 epoch 时 PhysX 接触缓冲溢出（`compressContactStage1 fail`）。
 - 接触对提到 16M 后，3072 和 2048 env 都显存不足。PyTorch 一侧约 6 GB（主要是 782 条参考动作的数据，
-  与环境数无关），其余为 PhysX 缓冲。结论：本机无法稳定训练 DexHand021，需上云。
+  与环境数无关），其余为 PhysX 缓冲。
+- 16M 接触对 + `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`，各跑约 7 分钟：
+  1536 env 稳定跑完 51 个 epoch，稳态约 1.45 万步/秒，显存峰值 15.9/16.4 GB；
+  1024 env 稳定跑完 63 个 epoch，稳态约 1.25 万步/秒，显存峰值 15.2 GB。
+  吞吐随回合变长从约 1.9 万降到稳态值。结论：本机能训，但显存几乎占满（不能同时跑别的 GPU 任务），
+  按 31.5 亿步约 2.5–3 天（参考动作放慢 1.6× 则 4–4.7 天）；环境数少于作者的 8192，收敛性未验证。
 
 时间估计（以作者 Inspire checkpoint 的 31.5 亿环境步为基准；云端速度按 CUDA 核心数和更大的环境数推算，未实测）：
 
@@ -219,7 +224,7 @@ Inspire 手（动作/观测维度与 Inspire 运动学绑定，MODEL_CARD 明确
 - 手眼和安装标定基于视觉配准，不是机械计量，存在毫米级误差。
 - Dexplore 基于 Isaac Gym（已停止维护）；robot-assets 里的 USD 是给 IsaacLab 用的，不能直接复用，
   本计划沿用 Isaac Gym + URDF。
-- 显存：本机只能开 3072 env，与作者的 8192 env 训练设置不同。
+- 显存：本机训练 DexHand021 只能开 1024–1536 env，与作者的 8192 env 训练设置不同。
 
 ---
 
