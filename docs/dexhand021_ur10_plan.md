@@ -138,11 +138,20 @@ Inspire 手（动作/观测维度与 Inspire 运动学绑定，MODEL_CARD 明确
 - 待查：任务观测和奖励是否用到 `dof_smpl`（6:51、57:102）这类局部关节角；
   如果用到，也要按 v' = −M v 镜像。
 
-- [ ] dex-retargeting 配置：手腕 link 加五指 `*_pad` 与 MANO 关键点对应；`robot_configs.py` 增加 `dexhand021`。
-- [ ] `convert_grab.py --mirror`（D1-A）：镜像右手数据，重定向到左手。
-- [ ] 重定向结果可视化抽查（每类动作抽几条，渲染成视频）。
-- [ ] D4 对齐 + UR10 IK 可达性过滤（`ur10_dexhand.urdf` + `T_tcp_hand`），输出可用序列清单。
-- [ ] 全量转换（只转约 657 条右手序列；接触计算已在 GPU 上，速度主要受重定向影响）。
+- [x] 重定向配置 `data_processing/retarget_configs/dexhand021_left.yml`：只优化 12 个主动关节（mimic 生效），
+      目标 = 五指 pad→MANO 指尖、远节 link→DIP/IP、拇指 link1_3→MCP（不加 MCP 时拇指 IP 偏差约 3 cm，加后约 6 mm）。
+      `robot_configs.py` 新增 `dexhand021`（`mirror=True`，SAPIEN↔Isaac 关节顺序由关节名生成）。
+- [x] 修复原版 bug：重定向用的手部关键点取了 `joints[:, 50:65]`，SMPL-X 右手实为 40–54
+      （Inspire 只用指尖顶点，不受影响；Leap 等用到 DIP 的配置原本会拿到脸部/脚部的点）。
+- [x] 镜像实现：`convert_grab.mirror_interaction_data`；镜像物体由 `make_mirrored_objects.py` 生成
+      （网格放在 `~/data/GRAB/grab_dir/objects_mirror`，URDF 在 `mjcf/mirror/`），任务通过 `objectMirror: True` 选用。
+- [x] 验证（3 条序列）：镜像后的位置、旋转、接触与 Inspire 数据逐列一致；人手到物体的距离镜像前后完全相同；
+      四指 DIP 平均偏差 5–15 mm、拇指 5–7 mm；接触帧中五指 pad 到物体表面的中位距离多在 2–11 mm。
+- [ ] 全量转换（约 3 s/条，日志 `~/data/GRAB/convert_dexhand021.log`）。
+- [ ] D4 可达性：`data_processing/check_ur10_reachability.py`（平移对齐桌面中心，逐帧 IK，检查位姿误差、
+      机械臂是否低于桌面加 5 cm，并单独统计需要放慢几倍才能满足关节速度上限）。
+      s10 初步结果：IK 几乎都能到，主要问题是 (1) 原速回放比 UR10 关节速度上限快，中位约需放慢 1.7 倍；
+      (2) 抓桌面物体时小臂或腕部压得很低。桌面降低 20–30 cm 或移远 15 cm 明显改善。待全量数据完成后做桌子摆放扫描。
 
 ### 阶段 3：仿真任务
 - [ ] `dexplore/env/tasks/dexplore_dexhand021.py` + `dexplore/data/cfg/dexhand021.yaml`

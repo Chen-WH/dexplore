@@ -937,10 +937,12 @@ class DexploreTask(InterMimic):
     def _load_target_asset(self):
         """Load object meshes, create VHACD collision assets, and sample surface points."""
         asset_root = "dexplore/data/assets/mjcf/"
+        # Left-hand robots train on mirrored GRAB data (data_processing/make_mirrored_objects.py)
+        mirror = self.cfg["env"].get("objectMirror", False)
         self._target_asset = []
         self.object_points = []
         for i, object_name in enumerate(self.object_name):
-            asset_file = object_name + ".urdf"
+            asset_file = ("mirror/" if mirror else "") + object_name + ".urdf"
             max_convex_hulls = 20
             density = 20
             asset_options = gymapi.AssetOptions()
@@ -955,7 +957,7 @@ class DexploreTask(InterMimic):
 
             self._target_asset.append(self.gym.load_asset(self.sim, asset_root, asset_file, asset_options))
 
-            obj_file = asset_root + 'objects/' + object_name + '/' + object_name + '.obj'
+            obj_file = asset_root + ('objects_mirror/' if mirror else 'objects/') + object_name + '/' + object_name + '.obj'
             mesh_obj = trimesh.load(obj_file, force='mesh')
             obj_verts = mesh_obj.vertices
             center = np.mean(obj_verts, 0)

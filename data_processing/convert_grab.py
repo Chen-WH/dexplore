@@ -166,6 +166,37 @@ def build_joints2verts_mask():
     return mask
 
 
+# ── Mirror right-hand data into a left hand ─────────────────────────────────
+
+MIRROR = [-1.0, 1.0, 1.0]  # reflection x -> -x of the whole scene
+
+
+def mirror_interaction_data(data):
+    """Mirror an interaction tensor across the x = 0 plane (right hand -> left hand).
+
+    Positions p -> M p and rotations R -> M R M with M = diag(-1, 1, 1); for exp
+    maps and quaternion vector parts this is v -> -M v. Object meshes must be
+    mirrored the same way (make_mirrored_objects.py). Columns keep their meaning:
+    the controlled hand stays in the right-hand slots, so the left-hand-contact
+    filter in the task still drops the same sequences.
+    """
+    B = data.shape[0]
+    pos = data.new_tensor(MIRROR)
+    rotvec = -pos
+    quat_xyzw = torch.cat([rotvec, data.new_ones(1)])
+    out = data.clone()
+    # wrists (L, R), 32 hand joints, object, table
+    for a, b in [(0, 3), (51, 54), (102, 198), (198, 201), (238, 241)]:
+        out[:, a:b] = (data[:, a:b].view(B, -1, 3) * pos).view(B, -1)
+    # wrist + 15 local finger rotations per hand, as exp maps
+    for a, b in [(3, 51), (54, 102)]:
+        out[:, a:b] = (data[:, a:b].view(B, -1, 3) * rotvec).view(B, -1)
+    # object, table and 32 global hand joint rotations, as xyzw quaternions
+    for a, b in [(201, 205), (241, 245), (245, 245 + 32 * 4)]:
+        out[:, a:b] = (data[:, a:b].view(B, -1, 4) * quat_xyzw).view(B, -1)
+    return out
+
+
 # ── Setup retargeting ───────────────────────────────────────────────────────
 
 def setup_retargeting(robot_cfg, dex_retarget_dir):
@@ -178,8 +209,11 @@ def setup_retargeting(robot_cfg, dex_retarget_dir):
     hands_dir = Path(dex_retarget_dir)
     RetargetingConfig.set_default_urdf_dir(hands_dir)
 
-    robot_name_enum = RobotName[robot_cfg.robot_name if robot_cfg.robot_name != "schunk" else "svh"]
-    config_path = get_default_config_path(robot_name_enum, RetargetingType.position, HandType.right)
+    if robot_cfg.retarget_config:
+        config_path = Path(__file__).parent / robot_cfg.retarget_config
+    else:
+        robot_name_enum = RobotName[robot_cfg.robot_name if robot_cfg.robot_name != "schunk" else "svh"]
+        config_path = get_default_config_path(robot_name_enum, RetargetingType.position, HandType.right)
     override = dict(add_dummy_free_joint=True)
     if robot_cfg.urdf_subpath:
         override["urdf_path"] = robot_cfg.urdf_subpath
@@ -501,8 +535,9 @@ def process_sequence(name, args, robot_cfg, retargeting, robot, retarget2sapien,
     ], axis=-2)).double().view(-1, 32 * 4)
 
     # ── Retarget hand joints to robot DOFs ──────────────────────────────────
+    # Right wrist, the 15 right-hand joints (SMPL-X 40-54) and 5 fingertip vertices
     hand_joints = torch.cat([
-        joints[:, 21:22, :], joints[:, 50:65, :],
+        joints[:, 21:22, :], joints[:, 40:55, :],
         verts[:, 8079:8080, :], verts[:, 7669:7670, :],
         verts[:, 7794:7795, :], verts[:, 7905:7906, :],
         verts[:, 8022:8023, :],
@@ -510,6 +545,10 @@ def process_sequence(name, args, robot_cfg, retargeting, robot, retarget2sapien,
 
     if robot_cfg.hand_joint_reorder is not None:
         hand_joints = hand_joints[:, robot_cfg.hand_joint_reorder, :]
+
+    if robot_cfg.mirror:
+        data = mirror_interaction_data(data)
+        hand_joints = hand_joints * hand_joints.new_tensor(MIRROR)
 
     indices = retargeting.optimizer.target_link_human_indices
     qposes = []

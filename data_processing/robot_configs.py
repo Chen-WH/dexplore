@@ -6,6 +6,8 @@ Each robot defines:
   - num_dof: number of DOFs (including 6 dummy wrist DOFs)
   - hand_joint_reorder: reordering of SMPL-X hand joints before retargeting (if needed)
   - sapien2isaac: mapping from SAPIEN joint order to Isaac Gym joint order
+  - retarget_config: custom dex-retargeting config (for hands dex_retargeting does not know)
+  - mirror: mirror the right-hand GRAB data into a left hand (see convert_grab.mirror_interaction_data)
 """
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -22,6 +24,10 @@ class RobotConfig:
     isaac_dof_dict: dict = field(default_factory=dict)
     # SAPIEN DOF ordering (after retarget2sapien mapping)
     sapien_dof_list: List[str] = field(default_factory=list)
+    # dex-retargeting config path relative to data_processing/ (None = dex_retargeting default)
+    retarget_config: Optional[str] = None
+    # Retarget the mirrored right hand onto a left robot hand
+    mirror: bool = False
 
     def get_sapien2isaac(self):
         """Compute SAPIEN -> Isaac Gym joint reordering."""
@@ -116,6 +122,26 @@ ROBOT_CONFIGS = {
         ],
     ),
 }
+
+_DUMMY_JOINTS = [
+    "dummy_x_translation_joint", "dummy_y_translation_joint", "dummy_z_translation_joint",
+    "dummy_x_rotation_joint", "dummy_y_rotation_joint", "dummy_z_rotation_joint",
+]
+# DexHand021 finger joints: fingers 1 (thumb) .. 5 (pinky), segments 1..4; l_f_joint3_1 is fixed
+_DEXHAND021_FINGER_JOINTS = [f"l_f_joint{f}_{s}" for f in range(1, 6) for s in range(1, 5) if (f, s) != (3, 1)]
+
+ROBOT_CONFIGS["dexhand021"] = RobotConfig(
+    robot_name="dexhand021",
+    urdf_subpath=None,  # taken from retarget_config
+    num_dof=25,
+    hand_joint_reorder=ROBOT_CONFIGS["inspire"].hand_joint_reorder,  # SMPL-X -> MANO order
+    # Isaac Gym loads DOFs depth-first, finger by finger
+    isaac_dof_dict={name: i for i, name in enumerate(_DUMMY_JOINTS + _DEXHAND021_FINGER_JOINTS)},
+    # SAPIEN orders the finger joints breadth-first, segment by segment
+    sapien_dof_list=_DUMMY_JOINTS + sorted(_DEXHAND021_FINGER_JOINTS, key=lambda n: (n[-1], n)),
+    retarget_config="retarget_configs/dexhand021_left.yml",
+    mirror=True,
+)
 
 # Inspire uses a direct hardcoded reorder instead of sapien2isaac dict
 INSPIRE_RETARGET_REORDER = [0, 1, 2, 3, 4, 5, 7, 12, 8, 13, 10, 15, 9, 14, 6, 11, 16, 17]

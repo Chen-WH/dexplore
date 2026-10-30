@@ -5,6 +5,10 @@ Prepends the same 6-DOF floating-wrist chain used by the Inspire sim URDF
 through `base_joint`. Mimic tags are dropped because Isaac Gym ignores them;
 couplings are applied in the task's `_action_to_pd_targets` instead.
 
+Also writes `dexhand021_<side>_retarget.urdf` (hand only, mimic kept) for
+dex-retargeting, so retargeting and simulation share the same kinematics and
+the same hand base frame.
+
 Meshes are not copied: `<output_dir>/meshes` is a symlink to robot-assets.
 
 Usage:
@@ -12,6 +16,7 @@ Usage:
         --robot_assets ~/ros2_ws/src/robot-assets --side left
 """
 import argparse
+import copy
 import os
 import xml.etree.ElementTree as ET
 
@@ -53,13 +58,15 @@ def main():
 
     for el in root.findall("mujoco"):
         root.remove(el)
+    for mesh in root.iter("mesh"):
+        mesh.set("filename", mesh.get("filename").replace("../meshes/", "meshes/"))
+    retarget_root = copy.deepcopy(root)
+
     n_mimic = 0
     for joint in root.findall("joint"):
         for mimic in joint.findall("mimic"):
             joint.remove(mimic)
             n_mimic += 1
-    for mesh in root.iter("mesh"):
-        mesh.set("filename", mesh.get("filename").replace("../meshes/", "meshes/"))
 
     hand_base = f"{args.side}_hand_base"
     assert root.find(f"link[@name='{hand_base}']") is not None, f"{hand_base} not found in {src}"
@@ -90,10 +97,11 @@ def main():
     if not os.path.lexists(mesh_link):
         os.symlink(os.path.join(src_dir, "meshes"), mesh_link)
     out = os.path.join(args.output_dir, f"dexhand021_{args.side}.urdf")
-    if hasattr(ET, "indent"):  # python >= 3.9
-        ET.indent(root, space="  ")
     ET.ElementTree(root).write(out, encoding="utf-8", xml_declaration=True)
     print(f"Saved {out} (from {os.path.basename(src)}, dropped {n_mimic} mimic tags)")
+    out = os.path.join(args.output_dir, f"dexhand021_{args.side}_retarget.urdf")
+    ET.ElementTree(retarget_root).write(out, encoding="utf-8", xml_declaration=True)
+    print(f"Saved {out} (mimic kept)")
 
 
 if __name__ == "__main__":
