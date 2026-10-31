@@ -9,6 +9,24 @@ Inspire 手（动作/观测维度与 Inspire 运动学绑定，MODEL_CARD 明确
 
 ---
 
+## 当前状态（2026-10-31 暂停，下次从这里继续）
+
+- 已完成：阶段 0–2 全部（DexHand021 URDF、镜像、重定向 1335 条、UR10 可达性扫描）；
+  阶段 3 的任务类和配置，冒烟训练通过；本机和云端训练时间估计（见阶段 4）。
+- **尚未开始任何正式训练。** 用户要求预处理完后停在训练前。
+- 继续之前需要用户决定：
+  1. 桌子摆放：建议真实桌面相对 UR10 降低 30–40 cm（可达 38–41%），可选再远离 15 cm（放慢倍数 1.8× → 1.5×）；
+     改动后需重新标定 `table_boundary_*.json` 并重跑 `check_ur10_reachability.py`。
+  2. 训练集：全部 657 条 vs 选定摆放下可行的子集（约 270–360 条）。
+  3. 是否按 1.5–1.8× 放慢参考动作（`dataFramesScale`）；倾向于放慢后再训练。
+  4. 训练放本机还是云端（4090 / 48GB）。
+- 建议的下一步：
+  - 先做阶段 3 的 `playdataset` 运动学回放目检；
+  - 再用本机 1024 env 试训几个小时（`--cfg_env dexplore/data/cfg/dexhand021_local16g.yaml --num_envs 1024`，
+    设置 `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`），确认长时间训练稳定、成功率在上升；
+  - 然后再决定正式训练放在哪里。
+- 已知小问题：可达性扫描 `y-0.15_z-0.2` 那组中途段错误（pinocchio + torch），未重跑。
+
 ## 0. 已完成（2026-10-29 ~ 10-30）
 
 - [x] 环境：conda env `dexplore`（py3.8, Isaac Gym Preview 4, torch 2.4.1+cu121,
@@ -83,7 +101,7 @@ Inspire 手（动作/观测维度与 Inspire 运动学绑定，MODEL_CARD 明确
 ## 3. 分阶段任务
 
 ### 阶段 0：仓库整理
-- [ ] 提交 GRAB 预处理脚本和 `convert_grab.py` 修复（可考虑向 upstream 提 PR）。
+- [x] 提交 GRAB 预处理脚本和 `convert_grab.py` 修复（d2583f1；可考虑向 upstream 提 PR）。
 - [x] `data_processing/make_dexhand021_urdf.py`：从 `dexhand021_left_convex_mimic.urdf` 生成
       `dexplore/data/assets/dexhand021/dexhand021_left.urdf`（前置 6 自由度浮动手腕，与 Inspire 相同；
       去掉 mimic 标签）；`meshes/` 软链接到 robot-assets（不复制、不入库）。
@@ -233,4 +251,6 @@ Inspire 手（动作/观测维度与 Inspire 运动学绑定，MODEL_CARD 明确
 - 重定向输出：`~/data/GRAB/dexplore_motions`（仓库内 `data/`）
 - SMPL-X：`~/data/SMPL-X/models/smplx`
 - InterAct：`~/Git/InterAct`；dex-urdf：`~/Git/dex-urdf/robots/hands`
-- 日志：`~/data/GRAB/{convert_inspire,contact_fix,eval_inspire}.log`
+- 日志：`~/data/GRAB/{convert_inspire,contact_fix,eval_inspire,convert_dexhand021}.log`
+- UR10 可达性扫描结果：`~/data/GRAB/ur10_reachability/y{dy}_z{dz}.json`（桌面平移量，base 系，单位 m）
+- 本机 16GB 训练配置：`dexplore/data/cfg/dexhand021_local16g.yaml`（16M 接触对，配合 1024–1536 env）
